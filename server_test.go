@@ -35,7 +35,6 @@ func stripSpaces(str string) string {
     }, str)
 }
 
-
 func TestXMLWithValidFormat(t *testing.T) {
 	c = make(chan string)
 
@@ -81,3 +80,49 @@ func TestXMLWithValidFormat(t *testing.T) {
 	}
 }
 
+func TestXMLWithIvalidFormat(t *testing.T) {
+	c = make(chan string)
+
+	data := `<orderList>
+	<Order>
+			<id>aeffb38f-a1a0-48e7-b7a8-2621a2678534</id>
+			<data>first_Order_Data</data>
+			<createdAt>0001-01-01T00:00:00Z</createdAt>
+			<updatedAt>0001-01-01T00:00:00Z</updatedAt>
+		</order>
+	</orderList>`
+
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "http://localhost:8080/process", strings.NewReader(data)) 
+
+	processHandler(res, req) 
+	content, _ := ioutil.ReadAll(res.Body)
+	// strip spaces to compare string.
+	expected := "XML syntax error on line 7: element <Order> closed by </order>"
+
+
+	if string(content) != expected { 
+		t.Errorf("Expected %s, got %s", expected, string(content))
+	}
+
+}
+
+func TestXMLNull(t *testing.T) {
+	c = make(chan string)
+
+	data := ""
+
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "http://localhost:8080/process", strings.NewReader(data)) 
+
+	processHandler(res, req) 
+	content, _ := ioutil.ReadAll(res.Body)
+	// strip spaces to compare string.
+	expected := "EOF"
+
+
+	if string(content) != expected { 
+		t.Errorf("Expected %s, got %s", expected, string(content))
+	}
+
+}
