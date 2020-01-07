@@ -10,8 +10,6 @@ import (
 	"net/http"
 )
 
-var c chan string
-
 type Order struct {
 	Id string `xml:"id" json:"id"`
 	Data string `xml:"data" json:"data"`
@@ -23,31 +21,44 @@ type OrderList struct {
 	Orders []Order `xml:"order"`
 }
 
-// Process xml and convert to anonymous JSON format
-func processXML(data string) {
-	v := OrderList{}
 
-	err := xml.Unmarshal([]byte(data), &v)
+// process the given order
+func processXMLOrder(order *Order, finish chan bool) {
+	order.Data = strings.ToUpper(order.Data)
+	// signal that this order has finished processing
+	finish <- true
+}
+
+
+// Process xml and convert to anonymous JSON format
+func processXML(data string) string {
+	orderList := OrderList{}
+
+	err := xml.Unmarshal([]byte(data), &orderList)
 	if err != nil {
 		fmt.Printf("error: %v", err)
-		c <- err.Error()
-		return
+		return err.Error()
 	}
 
-	for index, element := range v.Orders {
-		// index is the index where we are
-		// element is the element from Orders for where we are
-		v.Orders[index].Data = strings.ToUpper(element.Data)
+	// check if each goroutine has finished
+	finish := make(chan bool)
+
+	for index, _ := range orderList.Orders {
+		go processXMLOrder(&orderList.Orders[index], finish)
+		<- finish 
 	}
 
-	jsonByteArray, err := json.MarshalIndent(&v.Orders, "", "    ")
+	// convert to byte array
+	jsonByteArray, _ := json.MarshalIndent(&orderList.Orders, "", "    ")
 
 	jsonString := "{}"
-	if len(v.Orders) > 0 {
+	if len(orderList.Orders) > 0 {
 		// convert to string
 		jsonString = "{" + string(jsonByteArray)[1:len(jsonByteArray) - 1] + "}"
 	}
-	c <- jsonString
+	
+	// get json string
+	return jsonString
 }
 	
 
@@ -55,16 +66,13 @@ func processHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		body, _ := ioutil.ReadAll(r.Body)
 
-		go processXML(string(body))
-
-		result := <- c
+		result := processXML(string(body))
 
 		fmt.Fprintf(w, "%s", result)	
     } 
 }
 
 func main() {
-	c = make(chan string)
 	http.HandleFunc("/process", processHandler)  
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

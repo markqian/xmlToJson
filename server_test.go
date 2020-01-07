@@ -11,7 +11,6 @@ import (
 )
 
 func TestEmptyXML(t *testing.T) {
-	c = make(chan string)
 
 	res := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "http://localhost:8080/process", strings.NewReader("<orderList></orderList>")) // step 1
@@ -36,7 +35,6 @@ func stripSpaces(str string) string {
 }
 
 func TestXMLWithValidFormat(t *testing.T) {
-	c = make(chan string)
 
 	data := `<orderList>
 	<order>
@@ -81,7 +79,6 @@ func TestXMLWithValidFormat(t *testing.T) {
 }
 
 func TestXMLWithIvalidFormat(t *testing.T) {
-	c = make(chan string)
 
 	data := `<orderList>
 	<Order>
@@ -108,7 +105,6 @@ func TestXMLWithIvalidFormat(t *testing.T) {
 }
 
 func TestXMLNull(t *testing.T) {
-	c = make(chan string)
 
 	data := ""
 
